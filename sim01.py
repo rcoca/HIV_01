@@ -254,7 +254,7 @@ def onesim(params):
 			counters.clear()
 
 	#END of simulation; just need to clean up: reset static elements
-	#ai: mostly don't need to clean up in Python unless we intend to reuse objects
+	# mostly don't need to clean up in Python unless we intend to reuse objects
 	# (and EHG don't even reuse the persons, so the rest of object creation is a trivial cost)
 	# prepare classes for reuse
 	schedule.clear_partnerships() # clears the `partnerships` and `transmissions` multimaps
