@@ -103,8 +103,7 @@ def test_random_pair(male, female, draw, phi):
 	pairup = False
 	if male.comsex and female.comsex:
 		pairup = True
-	elif(draw < phi(male, female)): #ai: EHG use binomial; why?
-		#ai: check that partnership doesn't already exist
+	elif(draw < phi(male, female)):
 		if female not in male.partners:
 			assert male not in female.partners
 			pairup = True
@@ -210,13 +209,10 @@ def onesim(params):
 	males = list(Person(sex='M', registry=schedule, params=params) for i in range(nM))
 	females = list(Person(sex='F', registry=schedule, params=params) for i in range(nF))
 	prng = params['prng']
-	#ai: look for data!
-	#jk: vandepitte (2006); carael (2006) data
 	nclients = int(p_nclients * len(males))
 	nsexworkers = int(p_nsexworkers * len(females))
 	clients = prng.choice(males, nclients)
 	sexworker = prng.choice(females, nsexworkers)
-	#jk: look for more data
 	nF_ART = int(p_nF_ART * len(females))
 	nM_ART = int(p_nM_ART *len(males))
 
