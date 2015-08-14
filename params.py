@@ -52,33 +52,6 @@ def phi_ehg(male, female, epsilon):
 	else:
 		return (1.0-epsilon)  #epsilon controls concurrency
 
-"""
-I'd like to combine this with targets.
-EHG have epsilon as resistence to concurrency,
-starting at 1.
-That is like everyone having a target of 1.
-Consider eps of 0.8.
-That is a 20% chance of forming if at least one of them already has a partner.
-Suppose (MK 2000) there is a 90% chance at at least one has a partner.
-P(only man has partner) is .68*.27
-P(only woman has partner) is .32*.73
-P(both have) =.68*.73
-So conditional on at least one having a partner,
-20% is roughly the probability that the woman has no partner.
-
-Here is the obvious way.
-The target becomes a second constraint.
-Probability is unchnaged if target is above current.
-Probability falls toward zero if target is below zero.
-So we have
-- an overall concurrency penalty, e.
-- M & F penalties for exceeding target, eF and eM.
-- return (1-e)(1-eF)(1-eM)
-
-This seems to have two parts:
-1. selection of target (shifted geometric?)
-2. determination of penalty
-"""
 
 def phi2(male, female, epsilon):
 	"""Return float, the probability of partnership formation,
