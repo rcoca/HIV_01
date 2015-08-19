@@ -1,43 +1,44 @@
 """Provides parameter sets (as dicts) for simulations.
 
 shared_params holds the common values across models.
-These are picked to match EHG paper,
-with three very slight differences in parameterization
-(chosen for robustness to possible experiments).
 
 - set pop_size, and then produce equal numbers of of M and F
+- FCSW (female commercial sex worker
 - set pct of M and F seeded with HIV (matching EHG paper discussion),
   instead of an integer value
+- jk: no number for seed of FCSW
 - set transmission rates for M and for F separately
 """
 import math
 
-def f2(params): #chk chk
+def f2(params):
 	print params['model_name']
-
-
-## Parameters values used in all scenarios (picked to match EHG paper)
-#    epsilon def is in sim.py
 
 #WARNING: shared_params is not a complete parameter set! (some vals are None)
 shared_params = dict(
 	model_name = '', #name of simulation model, and usu. folder for output
-	n_sim = 100,  #the number of replications for each parameter set (each value of epsilon)
+	n_sim = 10,  #IMPORTANT!!! the number of replications for each parameter set (each value of epsilon)
 	pop_size = 2 * 10**4,  #equal number of males & females
 	pctHIVseed = 1,
-	burn_days = 365*1,
-	sim_days=365*5,
+	burn_days = 365*5,
+	sim_days=365*100,  #changed form 250 years to 100 temporarily
 	out_interval = 365,
-	rndseed = 7930881,  #fr EHG, but will be augmented based on sim specification
-	#daily infection rate during each stage: a sequence
+	rndseed = 7930881,  #From EHG code
 	beta_M2F = None,
 	beta_F2M = None,
+	beta_FCSW2M = None,
+	beta_M2F_ART = None,
+	beta_F2M_ART = None, 
 	#durations during each stage: a sequence
 	dur = None,
 	#aggregate partnership formation paramter
 	rho = None,
 	#chk this partnership dissolution param used by Partnership at initialization
 	sigma = None,
+	p_nclients = None,
+	p_nsexworkers = None,
+	p_nM_ART = None,
+	p_nF_ART = None
 	)
 
 def phi_ehg(male, female, epsilon):
@@ -52,12 +53,12 @@ def phi_ehg(male, female, epsilon):
 	else:
 		return (1.0-epsilon)  #epsilon controls concurrency
 
-
 def phi2(male, female, epsilon):
 	"""Return float, the probability of partnership formation,
 	**given** that `male` and `female` are selected as potential partners.
 	Based on each individual's current number of partnerships,
 	and mixing parameter
+    Sawers, Isaac, Stillwaggon - coital dilution example.
 	:note:
 	  epsilon controls concurrency (1-> none, 0 -> no resistance),
 	  eF is female resistance to concurrency,
@@ -73,13 +74,10 @@ def phi3(male, female, epsilon):
 	**given** that `male` and `female` are selected as potential partners.
 	Based on each individual's current number of partnerships,
 	and mixing parameter ``epsilon``, which controls resistance
-	to concurrency
-	:note:
-	  Could take a random draw inside phi, but gain efficiency
-	  by drawing them all at once in ``random_pairings``
-	:note:
+	to concurrency`
+	note:
 	  epsilon controls concurrency (1-> none, 0 -> no resistance),
-	Here we implement the following gender asymmetry:
+	jk: Here we add commercial sex workers with no
 	it is the number of partners of the female that is controlling.
 	Males will always accept a new partner who has no partners,
 	and females without a partner will always accept a new partner.
@@ -123,11 +121,41 @@ dur_0 = 307
 beta_c = (beta_p*dur_p+beta_a*dur_a+beta_s*dur_s)/(dur_p+dur_a+dur_s+dur_0)
 dur_c = dur_p+dur_a+dur_s+dur_0
 
+# data from vandepitte and carael for subsaharan africa. 
+# low value 1st quartile
+# med value mean
+# high value 3rd quartile 
+# can add one extreme high?
+ 
+# jk: betas for Immune agents Attia et al. 2008 
+# jk: no data on different stages! 
+# Attia et al. report 92% decrease in transmission rate 
+beta_p_ART = .08 * beta_p  
+beta_a_ART = .08 * beta_a 
+beta_s_ART = .08 * beta_s
 
+
+beta_c_ART = (beta_p_ART*dur_p+beta_a_ART*dur_a+beta_s_ART*dur_s)/(dur_p+dur_a+dur_s+dur_0)
+
+
+p_nclients_low = 0.037
+p_nclients_med = 0.087
+p_nclients_high = 0.125
+p_nsexworkers_low = 0.00065
+p_nsexworkers_med = 0.017
+p_nsexworkers_high = 0.0245
+
+# jk: look for data 
+p_nM_ART = 0.10
+p_nF_ART = 0.10
+
+#Base case scenario; should be the same as running sim.py and concurrency.py 
 #get the shared params
 ehg_staged01 = shared_params.copy()
 #params for the core EHG staged simulations
 beta_ehg = (beta_p, beta_a, beta_s, beta_0)
+beta_ART = (beta_p_ART, beta_a_ART, beta_s_ART, beta_0)
+
 #update the sim specific params
 ehg_staged01.update(
 	sim_name = 'ehg-staged',
@@ -136,20 +164,92 @@ ehg_staged01.update(
 	#daily infection rate during each stage: a sequence
 	beta_M2F = beta_ehg,
 	beta_F2M = beta_ehg,
+	beta_FCSW2M = beta_ehg,
+	beta_M2F_ART = beta_ART,
+	beta_F2M_ART = beta_ART,
 	#durations during each stage: a sequence
 	dur = (dur_p, dur_a, dur_s, dur_0),
+	p_nclients = 0,
+	p_nsexworkers = 0,
+	p_nM_ART = 0,
+	p_nF_ART = 0
 	)
 
-ehg_constant = ehg_staged01.copy()
-ehg_constant['beta_M2F'] = beta_c, 0, 0, 0
-ehg_constant['beta_F2M'] = beta_c, 0, 0, 0
-ehg_constant['dur'] = dur_c, 0, 0, 0
+#Low proportion of FSW 
+ehg_staged02_csw = shared_params.copy()
+#params for the core EHG staged simulations
+beta_ehg = (beta_p, beta_a, beta_s, beta_0)
+#update the sim specific params
+ehg_staged02_csw.update(
+	sim_name = 'ehg-staged',
+	rho = mk.rho,       #aggregate partnership formation paramter
+	sigma = mk.sigma,   #chk where is this partnership dissolution param used?
+	#daily infection rate during each stage: a sequence
+	beta_M2F = beta_ehg,
+	beta_F2M = beta_ehg,
+	beta_FCSW2M = beta_ehg,
+	beta_M2F_ART = beta_ART,
+	beta_F2M_ART = beta_ART,
+	#durations during each stage: a sequence
+	dur = (dur_p, dur_a, dur_s, dur_0),
+	p_nclients= p_nclients_low,
+	p_nsexworkers = p_nsexworkers_low,
+	p_nM_ART = p_nM_ART,
+	p_nF_ART = p_nF_ART
+	)
 
-mk_constant = ehg_constant.copy()
-mk_constant['beta_M2F'] = 0.05, 0, 0, 0
-mk_constant['beta_F2M'] = 0.05, 0, 0, 0
+#Medium proportion of FSW 
+ehg_staged03_csw = shared_params.copy()
+#params for the core EHG staged simulations
+beta_ehg = (beta_p, beta_a, beta_s, beta_0)
+beta_ART = (beta_p_ART, beta_a_ART, beta_s_ART, beta_0)
+#update the sim specific params
+ehg_staged03_csw.update(
+	sim_name = 'ehg-staged',
+	rho = mk.rho,       #aggregate partnership formation paramter
+	sigma = mk.sigma,   #chk where is this partnership dissolution param used?
+	#daily infection rate during each stage: a sequence
+	beta_M2F = beta_ehg,
+	beta_F2M = beta_ehg,
+	beta_FCSW2M = beta_ehg,
+	beta_M2F_ART = beta_ART,
+	beta_F2M_ART = beta_ART,
+	#durations during each stage: a sequence
+	dur = (dur_p, dur_a, dur_s, dur_0),
+	p_nclients = p_nclients_med,
+	p_nsexworkers = p_nclients_med,
+	p_nM_ART = p_nM_ART,
+	p_nF_ART = p_nF_ART
+	)
+
+#Medium proportion of FSW 
+ehg_staged04_csw = shared_params.copy()
+#params for the core EHG staged simulations
+beta_ehg = (beta_p, beta_a, beta_s, beta_0)
+beta_ART = (beta_p_ART, beta_a_ART, beta_s_ART, beta_0)
+
+#update the sim specific params
+ehg_staged04_csw.update(
+	sim_name = 'ehg-staged',
+	rho = mk.rho,       #aggregate partnership formation paramter
+	sigma = mk.sigma,   #chk where is this partnership dissolution param used?
+	#daily infection rate during each stage: a sequence
+	beta_M2F = beta_ehg,
+	beta_F2M = beta_ehg,
+	beta_FCSW2M = beta_ehg,
+	beta_M2F_ART = beta_ART,
+	beta_F2M_ART = beta_ART,
+	#durations during each stage: a sequence
+	dur = (dur_p, dur_a, dur_s, dur_0),
+	p_nclients = p_nclients_high,
+	p_nsexworkers = p_nsexworkers_high,
+	p_nM_ART = p_nM_ART,
+	p_nF_ART = p_nF_ART
+	)
 
 
+
+#jk: I do not understand why below averages are necessary?
 def avtrans2asymtrans(beta, reltransfm):
 	"""Return dict, f2m->list and m2f->list.
 	For average (stage-dependent) transmission rates beta,
@@ -170,6 +270,9 @@ def avtrans2asymtrans(beta, reltransfm):
 	  the stage-dependent average transmission rates
 	reltransfm : float
 	  female to male transmission rate relative to male to female
+      
+      #jk: fcsw to male transmission rate over different stages 
+      is the same as female to male transmission rate.
 	"""
 	assert (reltransfm <= 1.0)
 	result = dict()
@@ -177,5 +280,8 @@ def avtrans2asymtrans(beta, reltransfm):
 	m2f = tuple(mscale*bi for bi in beta)
 	result['m2f'] = m2f
 	result['f2m'] = tuple(reltransfm*bi for bi in m2f)
+	result['fcsw2m'] = copy.result['f2m']
 	return result
+
+
 
