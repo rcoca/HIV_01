@@ -1,37 +1,41 @@
 """Provides key classes for concurrency simulations.
 
-This code is replication of Sawers, Isaac, Stillwaggon (2011)
-"HIV and concurrent sexual partnerships: modelling the role of coital dilution"
+The code in this module began as a replication of Eaton,
+Hallet, and Garnett (2010) and is very heavily influenced by
+their online C++ code (person.cpp and partnership.cpp).
+http://www.springerlink.com/content/22t477k235477463/10461_2010_Article_9787_ESM.html
 
+:note: EHG used rgeom(p)+1, which is the same as np.random.geometric(p)!
+  (i.e., numpy uses the shifted geometric; R does not)
+:note 2013-12-03: replace schedule with Schedule object, passed explicitly.
 """
 
 import logging
 from collections import defaultdict
-schedule = dict(
-	deaths = defaultdict(list), # multimap for scheduling deaths: map date -> list of Person
-	transmissions = defaultdict(list),  # map **upcoming** transmission date to list of Partnership
-	dissolutions = defaultdict(list)  # map each **end** date list of Partnership
-	)
-	
 
 
-def stagedHIVfactory(durations, transM2F, transF2M):
+def stagedHIVfactory(durations, transM2F, transF2M, transM2F_ART, transF2M_ART):
 	"""Return class for staged HIV infection.
+	(Adopt this strategy to allow multiprocessing,
+	since class variables muat be assigned at runtime.)
 	"""
 	class HIV(Infection):
 		_durations = tuple(durations)
 		_duration = sum(_durations)
 		_beta_M2F = tuple(transM2F)
 		_beta_F2M = tuple(transF2M)
+		_beta_M2F_ART = tuple(transM2F_ART)
+		_beta_F2M_ART = tuple(transF2M_ART)
+		is_fatal = True
 		assert len(_durations)==len(_beta_F2M)==len(_beta_M2F)
 	return HIV
 
 class Infection(object):
 	"""
-	Provides an **ABSTRACT** infection class.
+	Provides a partially **ABSTRACT** infection class.
 	DO NOT USE THIS CLASS.
-	Instead, use the class factory `stagedHIVfactory`.
-	This class is missing the following class variables:
+	Instead, use the class factory `stagedHIVfactory`
+	in order to add the following vital class variables:
 	_durations : duration of each infection stage
 	_duration : total duration of the infection
 	_beta_M2F  : staged transmission rates for infected males
@@ -40,7 +44,7 @@ class Infection(object):
 	_durations = NotImplemented
 	_beta_M2F = NotImplemented
 	_beta_F2M = NotImplemented
-	def __init__(self, host, day):
+	def __init__(self, host, day, registry):
 		"""Return None.
 		Record start date and host.
 		Schedule host death.
@@ -48,11 +52,9 @@ class Infection(object):
 		self._host = host
 		self.start_date = day
 		self.end_date = day + self.duration
-		self.schedule_death()
-	def schedule_death(self):
-		dod = self.end_date
-		host = self._host
-		schedule['deaths'][dod].append(host)
+		self.registry = registry
+		if registry is not None:
+			registry.register_infection(self)
 	def stage(self, day):
 		"""Return str, the name of the current infection stage.
 		(Utilized to tally transmissions.)
@@ -107,6 +109,7 @@ class Infection(object):
 		stageEndDate = self.start_date #initialize to date of infection
 		#ai: small change from EHG: loop over common code
 		#ai: primary, asymptomatic, symptomatic infection stage
+		schedule = self.registry  #can we most this out of here? chkchk
 		for (dur_i,beta_i) in [(dur_p,beta_p),(dur_a,beta_a),(dur_s,beta_s),]:
 			stageEndDate += dur_i  # infection period (increment then compare)
 			if(eligDate < stageEndDate):
@@ -116,7 +119,7 @@ class Infection(object):
 						#schedule a transmission
 						partnership.transmission_scheduled = True
 						partnership.transmission_date = candidate
-						schedule['transmissions'][partnership.transmission_date].append(partnership)
+						schedule.register_transmission(partnership)
 						logging.info('Infection.expose: Transmission scheduled')
 						return
 				eligDate = stageEndDate  #if beta_i=0 or candidate too far out
@@ -130,8 +133,11 @@ class Infection(object):
 			if(candidate <= stageEndDate and candidate <= partnership.end_date):
 				partnership.transmission_scheduled = True
 				partnership.transmission_date = candidate
-				schedule['transmissions'][partnership.transmission_date].append(partnership)
+				schedule.register_transmission(partnership)
 				return
+	@property
+	def host(self):
+		return self._host
 	@property  #ai: really a class property
 	def duration(self):
 		return self._duration
@@ -140,13 +146,18 @@ class Person(object):
 	"""Provides a basic person class.
 	A person has a sex and a set of partnerships.
 	A person may have a disease and an associated date of death.
+	:todo: add date of birth for age contingent outcomes
 	"""
-	def __init__(self, sex, params):
+	def __init__(self, sex, registry, params):
 		"""Return None;  initialize a Person.
 		"""
-		self._sex = sex  #'M' or 'F' (EHG use integer: 1=male, 2=female)
+		self._sex = sex  #'M' or 'F' (vs EHG who use integer: 1=male, 2=female)
 		self._prng = params['prng']
+		self.comsex = False  #commercial sex sales (F) or purchase (M)
+		self.ART = False #person receiving ART 
 		self.reset()
+		if registry is not None:
+			registry.register_person(self)
 
 	def reset(self):
 		"""Return None.
@@ -180,20 +191,22 @@ class Person(object):
 		assert (self.n_partners == len(self.partnerships) == len(set(self.partners)))
 		logging.debug('EXIT: Person.remove_partnership')
 
-	def infect(self, Disease, day):  #compare EHG's HIVInfect
-		"""Return None,
+	def infect(self, Disease, day, registry):  #compare EHG's HIVInfect
+		"""Return Disease instance,
 		infect an individual with HIV, schedule death, and expose other partners to transmission 
 		"""
 		logging.debug('ENTER: Person.infect')
 		#change to infected state
 		self.is_infected = True
-		self.disease = Disease(self, day) #fatal disease will schedule death
+		#fatal disease will schedule death (chkchk change to list?)
+		disease = self.disease = Disease(self, day, registry=registry)
 		# expose current partners to disease transmission
 		for pship in self.partnerships:
 			pship.expose_transmission(day)
 		logging.debug('EXIT: Person.infect')
+		return disease
 
-	def HIVSeedInfect(self, Disease, day):  #compare EHG's HIVSeedInfect in person.cpp
+	def HIVSeedInfect(self, Disease, day, registry):  #compare EHG's HIVSeedInfect in person.cpp
 		"""Return None.  seed infection
 		:comment: There is a low probably of an offset of 0,
 			which would mean the day of death is the day seeded.
@@ -206,25 +219,16 @@ class Person(object):
 		# schedule current date uniformly during the duration of infection
 		offset = self._prng.randint(0, duration)  #same as random.randrange
 		doi = day - (duration - offset)
-		self.disease = Disease(self, doi) #fatal disease will schedule death
+		#registry will register the disease with the scheduler
+		self.disease = disease = Disease(self, doi, registry)
 		for pship in self.partnerships:
 			pship.expose_transmission(day)  #odd to use day instead of DOI, but simpler, and matches EHG
 		logging.debug('EXIT: Person.HIVSeedInfect')
+		return disease
 	
 	def has_primary(self):
 		return any(p.tag=='primary' for p in self.partnerships)
 
-	def die(self):  #compare EHG's `Kill`
-		"""Return None; "kills" the individual (i.e., reset, so population is constant).
-		Terminate partnerships and reset individual to unpartnered susceptible.
-		"""
-		logging.info('ENTER: Person.die')
-		#terminate all partnerships
-		for pship in tuple(self.partnerships):
-			pship.DeletePartnership()
-		assert len(self.partnerships)==0
-		self.reset()  #reborn anew, uninfected, same sex
-		logging.info('EXIT: Person.die')
 
 
 	###################### ai: convenience additions ##############################
@@ -238,18 +242,18 @@ class Person(object):
 	@property
 	def partners(self):
 		return (indiv for pship in self.partnerships for indiv in pship.partners if indiv is not self)
-	@staticmethod
-	def count_scheduled_deaths():
-		return sum(len(lst) for lst in schedule['deaths'].values())
 
   
 class Partnership(object):
 	"""Provides a paired heterosexual "partnership" (i.e., sexual relationship).
 	A Partnership has a predetermined random duration and schedules HIV transmission events.
+
+	A Partnership is initialized with a `start_date`; its duration is determined
+	during intialization, using a geometric distribution parameterized by `sigma`
+	(which must be provided in the `params` dict). The mean duration (in days) of the 
+	partnership is simply 1/sigma.
 	"""
-	# initialize partnership counter
-	n_partnerships = 0
-	def __init__(self, male, female, start_date, params):
+	def __init__(self, male, female, day, registry, params):
 		"""Return None. Initialize partnership,
 		schedule partnership dissolution,
 		schedule disease transmission.
@@ -257,29 +261,36 @@ class Partnership(object):
 		logging.debug('ENTER: Partnership.__init__')
 		assert (male.sex=='M' and female.sex=='F')
 		self._mf = male, female
+		self.set_tag(params)
+		self.start_date = day
+		self.end_date = day + self.pshipduration(params)
+		self.transmission_scheduled = False	# T/F whether HIV transmission is scheduled for the partnership
+		self.transmission_date = None      #date for scheduled transmission
+		#register this partnership if possible
+		self.registry = registry  #can we get rid of this?
+		if registry is not None:
+			registry.register_partnership(self)
+		# add new partnership to each partner's partnership list
+		male.add_partnership(self)
+		female.add_partnership(self)
+		# expose partnership to infection transmission (if exactly one is infected)
+		self.expose_transmission(day)
+		logging.debug('EXIT: Partnership.__init__')
+	def pshipduration(self, params):
+		self._prng = prng = params['prng']
+		#follow EHG, but is geometric distribution the best choice? (constant risk of break up...)
+		return prng.geometric(params['sigma'])  #add partnership duration (min of 1)
+	def set_tag(self,params):
 		#allow only one primary partner (check union of partnerships sets)
+		male, female = self._mf
 		has_primary = any(p.tag=='primary' for p in (male.partnerships + female.partnerships))
 		if has_primary:
 			self.tag = 'secondary'
-			#set the relative frequency for non 'primary' partners 
+			#set the relative frequency for non 'primary' partners (default is 1)
 			self.sexfreq = params.get('secondary_sexfreq', 1)
 		else:
 			self.tag = 'primary'
 			self.sexfreq = 1  #primary partnership normal frequency
-		self.start_date = start_date
-		self._prng = prng = params['prng']
-		self.end_date = start_date + prng.geometric(params['sigma'])  #add partnership duration (min of 1)
-		self.transmission_scheduled = False	# T/F whether HIV transmission is scheduled for the partnership
-		self.transmission_date = None      #date for scheduled transmission
-		# add new partnership to each partner's partnership list
-		male.add_partnership(self)
-		female.add_partnership(self)
-		# add partnership to partnership multimap with end date
-		schedule['dissolutions'][self.end_date].append(self)
-		self.__class__.n_partnerships += 1
-		# expose partnership to infection transmission (if exactly one is infected)
-		self.expose_transmission(start_date)
-		logging.debug('EXIT: Partnership.__init__')
 		
 	def expose_transmission(self, day):
 		"""Return None; expose and possibly schedule partnership for transmission event.
@@ -306,7 +317,8 @@ class Partnership(object):
 		logging.debug('EXIT: Partnership.expose_transmission')
 
 	def transmit(self, Disease, day): #compare EHG's HIVTransmission in partnership.cpp
-		"""Return Person; transmit the HIV infection as **previously** scheduled
+		"""Return tuple of (Person,Disease);
+		transmit the HIV infection as **scheduled**
 		from the infected partner to the uninfected partner.
 		(If both are infected, then the originally uninfected partner got
 		infected by someone else since this partnership formed.)
@@ -314,56 +326,29 @@ class Partnership(object):
 		logging.debug('ENTER: Partnership.transmit_HIV')
 		assert self.transmission_scheduled, 'Only scheduled transmissions shd call this'
 		assert self.transmission_date==day, 'Only scheduled transmissions shd call this'
+		registry = self.registry
 		male, female = self._mf
 		transmitter = None
+		disease = None
 		if(male.is_infected and not female.is_infected): # M --> F transmission
 			transmitter = male
-			female.infect(Disease, day)   # infect the female
+			disease = female.infect(Disease, day, registry)   # infect the female
 		elif(not male.is_infected and female.is_infected): # F --> M transmission
 			transmitter = female
-			male.infect(Disease, day)   # infect the male
-		else: #partner who was uninfected when partnership formed subsequently became infected
+			disease = male.infect(Disease, day, registry)   # infect the male
+		else:
+			#partner who was uninfected when partnership formed subsequently became infected
+			#(in this case there is no new transmission -> no reinfection)
 			assert (male.is_infected and female.is_infected)
 		self.transmission_scheduled = False
 		logging.debug('EXIT: Partnership.transmit_HIV')
-		return transmitter
+		return transmitter, disease
 
-	def DeletePartnership(self):
-		"""Return None; delete a partnership from ``partnerships`` multimap
-		*before* scheduled end date (e.g., when partner dies from HIV).
-		Also remove any scheduled transmissions.
-		"""
-		schedule['dissolutions'][self.end_date].remove(self)
-		self.__class__.n_partnerships -= 1
-		#destroy the partnership (match EHG's destructor for the partnership class)
-		male, female = self._mf
-		male.remove_partnership(self) #removes from set *and* decrements this person's count
-		female.remove_partnership(self)
-		# check if a future transmission is scheduled, and if so remove it
-		if(self.transmission_scheduled):
-			schedule['transmissions'][self.transmission_date].remove(self)
 
 	#properties
 	@property
 	def partners(self):
 		return self._mf
 		
-	#chk this may work very differently than the EHG code, but that shd't matter, it's just cleanup
-	@classmethod
-	def clear(cls): # delete all partnerships (prepare for next simulation); compare EHG's DumpPartnerships
-		for lst in schedule['dissolutions'].values():
-			for pship in lst[:]:
-				pship.DeletePartnership()
-		assert cls.n_partnerships == 0
-		schedule['dissolutions'].clear()
-		schedule['transmissions'].clear()
 
-	######################  ai: new convenience methods #######################################
-	@classmethod
-	def count_partnerships(cls):
-		return sum(len(lst) for lst in schedule['dissolutions'].values())
-
-	@classmethod
-	def count_transmissions(cls):
-		return sum(len(lst) for lst in schedule['transmissions'].values())
 
