@@ -17,10 +17,10 @@ def f2(params):
 #WARNING: shared_params is not a complete parameter set! (some vals are None)
 shared_params = dict(
 	model_name = '', #name of simulation model, and usu. folder for output
-	n_sim = 10,  #IMPORTANT!!! the number of replications for each parameter set (each value of epsilon)
+	n_sim = 100,  #IMPORTANT!!! the number of replications for each parameter set (each value of epsilon)
 	pop_size = 2 * 10**4,  #equal number of males & females
 	pctHIVseed = 1,
-	burn_days = 365*5,
+	burn_days = 365*5,  
 	sim_days=365*250,  #changed form 100 years to 10 temporarily
 	out_interval = 365,
 	rndseed = 7930881,  #From EHG code
@@ -146,8 +146,8 @@ p_nsexworkers_med = 0.017
 p_nsexworkers_high = 0.0245
 
 # jk: look for data 
-p_nM_ART = 0.10
-p_nF_ART = 0.10
+p_nM_ART = 0.20
+p_nF_ART = 0.20
 
 #Base case scenario; should be the same as running sim.py and concurrency.py 
 #get the shared params
@@ -282,6 +282,5 @@ def avtrans2asymtrans(beta, reltransfm):
 	result['f2m'] = tuple(reltransfm*bi for bi in m2f)
 	result['fcsw2m'] = copy.result['f2m']
 	return result
-
 
 

@@ -87,7 +87,6 @@ class ARTPartnership(Partnership):
 	def pshipduration(self, params):
 		return 1
 '''
-#not needed
 	def infect_ART(self, Disease, day, registry):  
 		logging.debug('ENTER: Person02.infect')
 		#change to infected state
@@ -109,6 +108,8 @@ class Infection01(Infection):
 	"""
 	_beta_M2F_ART = NotImplemented 
 	_beta_F2M_ART = NotImplemented 
+
+#jk: override stage and expose methods?
 
 
 	def expose_ART(self, ART_partnership, day): #called by ARTPartnership::expose_ART_transmission
@@ -152,5 +153,7 @@ class Infection01(Infection):
 				partnership.transmission_date = candidate
 				schedule.register_transmission(partnership)
 				return
+
+
 		
 '''

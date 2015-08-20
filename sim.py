@@ -386,7 +386,10 @@ def onesim(params):
 	# note: don't add factory to model_params as it won't pickle -> MP problems
 	params['Disease'] = stagedHIVfactory(durations=params['dur'],
 									transM2F=params['beta_M2F'],
-									transF2M=params['beta_F2M'])
+									transF2M=params['beta_F2M'],
+									transM2F_ART=params['beta_M2F_ART'],
+									transF2M_ART=params['beta_F2M_ART']
+									)
 
 	#create the phi for this model
 	# note: don't add to model_params as it won't pickle -> MP problems
