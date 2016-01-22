@@ -14,6 +14,7 @@ from numpy.random import RandomState
 import logging 
 import sim
 from concurrency import Person, Partnership, stagedHIVfactory
+import gc
 from concurrency01 import Person01, Person02, CommercialPartnership, ARTPartnership
 
 #  11 different values of epsilon (the concurrency parameter)
@@ -140,6 +141,7 @@ def get_param_set(params):
 				continue
 			else:
 				seed = params['rndseed'], n, int(eps * 10**5)   #replicate(n)-specific seed
+			
 				simparams = params.copy()  #fresh copy for each replicate (IMPORTANT!)
 				simparams.update(
 					prng = RandomState(seed=seed),
@@ -216,10 +218,22 @@ def onesim(params):
 	nsexworkers = int(p_nsexworkers * len(females))
 	clients = prng.choice(males, nclients)
 	sexworker = prng.choice(females, nsexworkers)
+	# upgrade selected sexworkers from Person to Person01 (sexworkers)
+	for sw in sexworker:
+		Person01.CastFromPerson(sw, True)
+		
 	#jk: look for more data
 	nF_ART = int(p_nF_ART * len(females))
-	nM_ART = int(p_nM_ART *len(males))
-
+	nM_ART = int(p_nM_ART * len(males))
+	f_ARTs = prng.choice(females, nF_ART)
+	m_ARTs = prng.choice(males, nM_ART)
+	
+	# upgarde selected fameles_ARTs and males_ARTs to Person02
+	for fa in f_ARTs:
+		Person02.CastFromPerson(fa, True)
+	for ma in m_ARTs:
+		Person02.CastFromPerson(ma, True)
+	
 	#begin simulation loop /* Do the simulations */
 	for day in range(sim_days+burn_days):
 		logging.info('\nBEGIN ITERATION for day {0}.'.format(day))
@@ -253,6 +267,7 @@ def onesim(params):
 			#reset counters
 			counters.clear()
 
+		gc.collect()
 	#END of simulation; just need to clean up: reset static elements
 	#ai: mostly don't need to clean up in Python unless we intend to reuse objects
 	# (and EHG don't even reuse the persons, so the rest of object creation is a trivial cost)

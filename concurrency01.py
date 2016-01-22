@@ -15,21 +15,26 @@ class Person01(Person):
     Overridden Methods: 
     """
 	def __init__(self, sex, registry, params): 
-		Person.__init__(self, "F", registry, params)
+		Person.__init__(self, sex, registry, params)
 		self.sexworker = False
 
+	@staticmethod
+	def CastFromPerson(person, sexworker_value):
+		setattr(person, 'sexworker', sexworker_value)
+		setattr(person, 'add_commercial_partnership', person01_add_commercial_partnership)
+		setattr(person, 'remove_commercial_partnership', person01_remove_commercial_partnership)
+	
+def person01_add_commercial_partnership(self, commercial_partnership): 
+	self.commercial_partnerships.append(commercial_partnership)
+	self.n_commercial_partners += 1
 
-	def add_commercial_partnership(self, commercial_partnership): 
-		self.commercial_partnerships.append(commercial_partnership)
-		self.n_commercial_partners += 1
 
-
-	def remove_commercial_partnership(self, commercial_partnership):
-		"""Return None; remove a commercial partnership from self.partnerships list.
-		"""
-		logging.debug('ENTER: Person.remove_partnership')
-		self.commercial_partnerships.remove(commercial_partnership)
-		self.n_partners -= 1
+def person01_remove_commercial_partnership(self, commercial_partnership):
+	"""Return None; remove a commercial partnership from self.partnerships list.
+	"""
+	logging.debug('ENTER: Person.remove_partnership')
+	self.commercial_partnerships.remove(commercial_partnership)
+	self.n_partners -= 1
 
 class CommercialPartnership(Partnership):
 	"""
@@ -58,18 +63,28 @@ class Person02(Person):
 	new methods: add_ART_partnership, remove_ART_partnership
 	overridden methods:
 	"""
+	
 	def __init__(self, sex, registry, params, ART):
 		Person.__init__(self, sex, registry, params)
-		self.ART = False 
+		self.ART = ART 
+		self.ART_partnership = []
+	
+	@staticmethod
+	def CastFromPerson(person, ART):
+		setattr(person, 'ART', ART)
+		setattr(person, 'ART_partnership', [])
+		setattr(person, 'add_ART_partnership', person02_add_ART_partnership)
+		setattr(person, 'remove_ART_partnership', person02_remove_ART_partnership)
+	
+		
+def person02_add_ART_partnership(self, ART_partnership):
+	self.ART_partnership.append(ART_partnership)
+	self.n_ART_partners += 1 
 
-	def add_ART_partnership(self, ART_partnership):
-		self.ART_partnership.append(ART_partnership)
-		self.n_ART_partners += 1 
-
-	def remove_ART_partnership(self, ART_partnership):
-		logging.debug('Enter: Person.remove_partnership')
-		self.ART_partnership.remove(ART_partnership)
-		self.n_partners -= 1
+def person02_remove_ART_partnership(self, ART_partnership):
+	logging.debug('Enter: Person.remove_partnership')
+	self.ART_partnership.remove(ART_partnership)
+	self.n_partners -= 1
 
 
 class ARTPartnership(Partnership):
