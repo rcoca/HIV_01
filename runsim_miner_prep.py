@@ -6,7 +6,9 @@ from sim_miner_prep import run_simulations,  run_simulations_mp
 #, onesim
 
 # Run model with medium sex worker population
-from params import ehg_staged05_csw as model_params, phi_ehg
+from params import phi_ehg1
+from params_miner_prep import ehg_staged05_csw as model_params
+
 
 ### model globals
 model_params = model_params.copy()

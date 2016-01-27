@@ -90,20 +90,19 @@ def phi3(male, female, epsilon):
 
 
 ## partnership formation parameters used by Morris & Kretzschmar
-class mk():
-	pass
-mk.rho = 0.01 
-mk.sigma = 0.005
+## partnership formation parameters used by Morris & Kretzschmar
+class mk:
+    rho = 0.01 
+    sigma = 0.005
 
 ## factor by which to increase staged transmission parameters
 ## to acheive same R0 for serial monogamy
 k = 1.435
 
 ## partnership parameters from Manicaland
-class manic():
-	pass
-manic.rho = 0.007677224796228377
-manic.sigma = 0.00195735077681542
+class manic:
+    rho = 0.007677224796228377
+    sigma = 0.00195735077681542
 
 
 # beta params are from EHG's code: concprimaryinf/R/conc.sim.R

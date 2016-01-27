@@ -55,13 +55,12 @@ class Scheduler(sim.Scheduler):
         assert self.count_partnerships() == old_partnership_count
         # population sizes
         yearday = day%365 # the day in the year
-        print day,yearday
+
         if yearday < Person03.activeRange[0] or  yearday>= Person03.activeRange[-1]:            
             filtered_males = filter(lambda x:not isinstance(x,Person03),males)
             msg="day: {day}, year day: {yday} Filtered out {nminers} from partnership formation".\
               format(nminers=len(males)-len(filtered_males),day=day,yday=yearday)
             logging.info(msg)
-            print msg
         else:
             filtered_males = males
 
