@@ -12,7 +12,7 @@ from params import shared_params, ehg_staged03_csw
 p_miners  = 0.08
 
 #under prep treatment
-p_PREP    = 0.01
+p_PREP    = 0.1
 beta_PREP = (0.0,0.0,0.0,0.0)
 
 #Base case scenario; should be the same as running sim.py and concurrency.py 

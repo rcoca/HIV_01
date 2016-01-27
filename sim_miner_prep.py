@@ -279,13 +279,23 @@ def onesim(params):
         tempfh.write(header)
 
         # Prepare variables (note that `males` and `females` not reused across simulations)
-        nminers     = int(p_miners * nM)
-        nmpreps     = int(p_PREP * nM)
+        nmin_noprep = int(p_miners*(1.0-p_PREP) * nM)
+        nmin_preps  = int(p_miners*p_PREP * nM)
+        nmpreps     = int(p_PREP * nM) 
         nfpreps     = int(p_PREP  * nF)
-        males       = list(Person(sex='M', registry=schedule, params=params) for i in range(nM-nminers-nmpreps))
-        males      += list(Person03(sex='M', registry=schedule, params=params) for i in range(nminers))
-        males      += list(Person04(sex='M', registry=schedule, params=prep_params) for i in range(nmpreps))
+
+        # generic male population without other properties
+        males       = list(Person(sex='M', registry=schedule, params=params) for i in range(nM-nmpreps-nmin_noprep))
+        #adding miners not under prep drugs
+        males      += list(Person03(sex='M', registry=schedule, params=params) for i in range(nmin_noprep))
+        # adding miners under prep drugs
+        males      += list(Person03(sex='M', registry=schedule, params=prep_params) for i in range(nmin_preps))
+        # adding "generic" males under prep treatment minus miners under prep (already accounted for)
+        males      += list(Person04(sex='M', registry=schedule, params=prep_params) for i in range(nmpreps-nmin_preps))
+
+        # generic female population without other attributes
         females     = list(Person(sex='F', registry=schedule, params=params) for i in range(nF-nfpreps))
+        # adding female population under prep drugs
         females    += list(Person04(sex='F', registry=schedule, params=prep_params) for i in range(nfpreps))
         prng        = params['prng']
         # ai: look for data!

@@ -1,6 +1,6 @@
 """
-This code uses concurrency.py to add commercial sex workers, and people on ART
-to the model. 
+This code uses concurrency.py and adds two more types of persons:
+miner workers and PREP-treated persons.
 """
 
 import logging
