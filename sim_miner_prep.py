@@ -279,13 +279,15 @@ def onesim(params):
         tempfh.write(header)
 
         # Prepare variables (note that `males` and `females` not reused across simulations)
-        nmin_noprep = int(p_miners*(1.0-p_PREP) * nM)
-        nmin_preps  = int(p_miners*p_PREP * nM)
-        nmpreps     = int(p_PREP * nM) 
-        nfpreps     = int(p_PREP  * nF)
+        nmin_noprep = int(p_miners*(1.0-p_PREP) * nM) # the fraction from miners not under PREP
+        nmin_preps  = int(p_miners*p_PREP * nM) # the fraction from miners under PREP
+        nminers     = nmin_prep+nmin_noprep # the total numer of miners
+        nmpreps     = int(p_PREP * nM) # the total fraction of population under PREP
+        nfpreps     = int(p_PREP  * nF) # the total fraction of population under prep
 
+        # Building up population from person types
         # generic male population without other properties
-        males       = list(Person(sex='M', registry=schedule, params=params) for i in range(nM-nmpreps-nmin_noprep))
+        males       = list(Person(sex='M', registry=schedule, params=params) for i in range(nM-nminers))
         #adding miners not under prep drugs
         males      += list(Person03(sex='M', registry=schedule, params=params) for i in range(nmin_noprep))
         # adding miners under prep drugs
