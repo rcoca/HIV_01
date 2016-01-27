@@ -1,5 +1,5 @@
 """ 
-This code uses sim.py to add commercial sex workers to the model
+This code uses extends sim01.py with miner workers and persons under PREP drugs
 
 """
 #import functools, random
