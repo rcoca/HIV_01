@@ -167,6 +167,8 @@ def get_param_set(params):
     outfile_pattern = 'eps??sim??.out'
     search_pattern = path.normpath(path.join(outfolder, outfile_pattern))
     previously_done = glob.glob(search_pattern)
+    # maybe swap loops here to ease multiprocessing on a cluster.
+    # before breaking down this function and delegating jobs
     for n in range(params['n_sim']):
         for i,eps in enumerate(ehg_epsilons):  #ehg_epsilons is a global constant
             assert type(eps) is float

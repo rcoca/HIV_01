@@ -11,8 +11,8 @@ import os.path as path
 from itertools import izip as zip  # Python 2.7
 from collections import defaultdict
 import datetime, logging
+import sys, os
 try:
-    import os
     os.mkdir("out")
 except:
     pass
@@ -61,6 +61,7 @@ class Scheduler(sim.Scheduler):
             msg="day: {day}, year day: {yday} Filtered out {nminers} from partnership formation".\
               format(nminers=len(males)-len(filtered_males),day=day,yday=yearday)
             logging.info(msg)
+            #print msg
         else:
             filtered_males = males
 
@@ -144,7 +145,6 @@ def run_simulations_mp(params, workerpool=None):
     Expected input is the dictionary of input parameters for simulation run.
     It uses multiprocessing to distribute work to more processors.
     """
-    import sys, os
     if 'linux' in sys.platform:
         logging.info("Installing interrupt handler")
         import signal
@@ -225,7 +225,7 @@ def onesim(params):
         params['fout'] = tempfh  # used by `record_output`
         tempfname = tempfh.name  # we'll rename this if the simulation runs to completion
         # time the simulation
-        t0 = time.clock()
+        t0 = time.time()
         schedule = Scheduler(params=params)  # event scheduler (transmissions, deaths, dissolutions)
         pop_size = params['pop_size']
         nM = nF = pop_size // 2
@@ -337,6 +337,7 @@ def onesim(params):
             #        We keep it this way just to match EHG.
             if (day >= burn_days and (day - burn_days) % out_interval == 0):
                 print '.',
+                sys.stdout.flush()
                 outIndex = (day - burn_days) / out_interval
                 # ai: recording strategy
                 #    params holds counters and fout
@@ -353,15 +354,16 @@ def onesim(params):
         schedule.deaths.clear()
 
         tempfh.close()
-        dt = time.clock() - t0
+        dt = time.time() - t0
         # since the simulation ran to completion, we can use the output file
         outfilename = params['outfilename']
         shutil.move(tempfname, outfilename)
         msg = """
-	{0} completed successfully in {1:d} minutes.
-	{0} output written to {2}.
-	""".format(sim_name, int(dt) // 60, outfilename)
+	{sim_name} completed successfully in {minutes:.2f} minutes.
+	{sim_name} output written to {outfilename}.
+	""".format(sim_name=sim_name, minutes=dt/60., outfilename=outfilename)
         logging.info(msg)
     except KeyboardInterrupt:
         logging.exception("Interrupted")
+        system.exit(0)
         raise

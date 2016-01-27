@@ -23,6 +23,7 @@ ehg_staged01 = shared_params.copy()
 #update the sim adding miners inside
 ehg_staged05_csw = ehg_staged03_csw.copy()
 ehg_staged05_csw.update(
+    	sim_name = 'ehg-staged',
         p_miners = p_miners,
         p_PREP   = p_PREP, 
         beta_PREP= beta_PREP

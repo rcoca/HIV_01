@@ -24,8 +24,8 @@ class Person03(Person):
 class Person04(Person):
     """
     This class models individuals taking PREP drugs.
+    Its only influence on the simulation is the beta parameters (set to 0,0,0,0).
     """
-    PREP = True
     def __init__(self, sex, registry, params):
         Person.__init__(self, sex, registry, params)
 
