@@ -12,8 +12,9 @@ model_params = model_params.copy()
 model_params.update(
     model_phi = phi_ehg,
     outfile_pattern = 'eps??sim??.out',
-    n_sim = 100, #the number of replications for each parameter set
-    pop_size = 2 * 10**4, #equal number of males & females
+    n_sim = 10, #the number of replications for each parameter set
+    pop_size = 1 * 10**3, #equal number of males & females
+    sim_days = 3*365
     )
 
 def run():
