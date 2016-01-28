@@ -1,6 +1,7 @@
 """
 Provides code to run multiple simulations.
-Uses sim01, sim, concurrency, concurrency01
+Uses sim_miner_prep, sim, concurrency, person_miner_prep
+Also exposes a run method for enqueueing from outside in a queue of simulations.
 """
 from sim_miner_prep import run_simulations,  run_simulations_mp
 #, onesim
@@ -19,9 +20,8 @@ model_params.update(
         pop_size=1 * 10 ** 3,  # equal number of males & females
         sim_days=365*3
 )
-
-if __name__ == '__main__':
-    outfolder = 'temp'
+def run():
+    outfolder = 'temp02'
     try:
         import os
         os.mkdir(outfolder)
@@ -33,3 +33,6 @@ if __name__ == '__main__':
     T0=time.time()
     run_simulations_mp(model_params)
     print "simulation took {minutes:.2f} minutes".format(minutes=(time.time()-T0)/60.0)
+    
+if __name__ == '__main__':
+    run()
